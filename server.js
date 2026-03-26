@@ -13,7 +13,8 @@ app.post("/download", (req, res) => {
     return res.status(400).json({ error: "URL é obrigatória" });
   }
 
-  const command = `yt-dlp -j "${url}"`;
+  // Melhor comando
+  const command = `yt-dlp -f "best[ext=mp4]" -g "${url}"`;
 
   exec(command, (error, stdout, stderr) => {
     if (error) {
@@ -21,18 +22,13 @@ app.post("/download", (req, res) => {
       return res.status(500).json({ error: "Erro ao processar vídeo" });
     }
 
-    try {
-      const data = JSON.parse(stdout);
+    const videoUrl = stdout.trim();
 
-      res.json({
-        title: data.title,
-        thumbnail: data.thumbnail,
-        url: data.url
-      });
-
-    } catch (err) {
-      res.status(500).json({ error: "Erro ao converter resposta" });
-    }
+    res.json({
+      title: "Video pronto para download",
+      thumbnail: "",
+      url: videoUrl
+    });
   });
 });
 
