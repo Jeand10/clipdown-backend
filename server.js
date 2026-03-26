@@ -32,20 +32,22 @@ app.post("/download", (req, res) => {
       thumbnail = data.thumbnail || thumbnail;
     } catch {}
 
-    // TENTATIVA 1 (com áudio)
-    const command = `mkdir -p downloads && yt-dlp -f best -o "${filepath}" "${url}"`;
+    // tentativa 1 (melhor qualidade)
+    let command = `mkdir -p downloads && yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o "${filepath}" "${url}"`;
 
-    exec(command, (error) => {
+    exec(command, (error, stdout, stderr) => {
 
       if (error) {
-        console.log("Fallback ativado...");
+        console.log("Tentando fallback...");
 
-        // TENTATIVA 2 (link direto)
-        const fallback = `yt-dlp -g "${url}"`;
+        // fallback mais leve (funciona mais)
+        const fallback = `yt-dlp -f best -o "${filepath}" "${url}"`;
 
-        exec(fallback, (err2, stdout2) => {
+        exec(fallback, (err2) => {
 
-          if (err2 || !stdout2) {
+          if (err2) {
+            console.error("Falhou tudo:", err2);
+
             return res.status(200).json({
               title: "Não foi possível baixar esse vídeo",
               thumbnail,
@@ -53,13 +55,10 @@ app.post("/download", (req, res) => {
             });
           }
 
-          const lines = stdout2.trim().split("\n");
-          const videoUrl = lines[0];
-
-          return res.json({
+          res.json({
             title,
             thumbnail,
-            url: videoUrl
+            url: `https://clipdown-backend-production.up.railway.app/files/${filename}`
           });
         });
 
