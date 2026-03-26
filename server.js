@@ -23,39 +23,55 @@ app.post("/download", (req, res) => {
 
   exec(infoCommand, (infoError, infoStdout) => {
 
-    let title = "Vídeo pronto para download";
+    let title = "Vídeo pronto";
     let thumbnail = "https://via.placeholder.com/300x200?text=ClipDown";
 
     try {
       const data = JSON.parse(infoStdout);
       title = data.title || title;
-
-      // usa thumbnail só se existir
-      if (data.thumbnail) {
-        thumbnail = data.thumbnail;
-      }
-
+      thumbnail = data.thumbnail || thumbnail;
     } catch {}
 
-    const downloadCommand = `mkdir -p downloads && yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o "${filepath}" "${url}"`;
+    // tentativa 1 (melhor qualidade)
+    let command = `mkdir -p downloads && yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o "${filepath}" "${url}"`;
 
-    exec(downloadCommand, (error, stdout, stderr) => {
+    exec(command, (error, stdout, stderr) => {
+
       if (error) {
-        console.error(stderr);
+        console.log("Tentando fallback...");
 
-        // NÃO quebra o sistema
-        return res.status(200).json({
-          title: "Não foi possível processar esse vídeo",
-          thumbnail,
-          url: ""
+        // fallback mais leve (funciona mais)
+        const fallback = `yt-dlp -f best -o "${filepath}" "${url}"`;
+
+        exec(fallback, (err2) => {
+
+          if (err2) {
+            console.error("Falhou tudo:", err2);
+
+            return res.status(200).json({
+              title: "Não foi possível baixar esse vídeo",
+              thumbnail,
+              url: ""
+            });
+          }
+
+          res.json({
+            title,
+            thumbnail,
+            url: `https://clipdown-backend-production.up.railway.app/files/${filename}`
+          });
         });
+
+      } else {
+
+        res.json({
+          title,
+          thumbnail,
+          url: `https://clipdown-backend-production.up.railway.app/files/${filename}`
+        });
+
       }
 
-      res.json({
-        title,
-        thumbnail,
-        url: `https://clipdown-backend-production.up.railway.app/files/${filename}`
-      });
     });
 
   });
