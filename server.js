@@ -25,7 +25,9 @@ app.post("/download", (req, res) => {
       });
     }
 
-    const videoUrl = stdout.trim();
+    // pega só o PRIMEIRO link (corrige bug)
+    const lines = stdout.trim().split("\n");
+    const videoUrl = lines[0];
 
     res.json({
       title: "Download pronto",
