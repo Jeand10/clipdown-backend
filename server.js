@@ -23,37 +23,55 @@ app.post("/download", (req, res) => {
 
   exec(infoCommand, (infoError, infoStdout) => {
 
-    let title = "Vídeo pronto para download";
+    let title = "Vídeo pronto";
     let thumbnail = "https://via.placeholder.com/300x200?text=ClipDown";
 
     try {
       const data = JSON.parse(infoStdout);
       title = data.title || title;
-
-      // tenta usar thumbnail (pode falhar, mas não quebra)
-      if (data.thumbnail) {
-        thumbnail = data.thumbnail;
-      }
-
+      thumbnail = data.thumbnail || thumbnail;
     } catch {}
 
+    // TENTATIVA 1 (com áudio)
     const command = `mkdir -p downloads && yt-dlp -f best -o "${filepath}" "${url}"`;
 
     exec(command, (error) => {
 
       if (error) {
-        return res.status(200).json({
-          title: "Não foi possível baixar esse vídeo",
-          thumbnail,
-          url: ""
-        });
-      }
+        console.log("Fallback ativado...");
 
-      res.json({
-        title,
-        thumbnail,
-        url: `https://clipdown-backend-production.up.railway.app/files/${filename}`
-      });
+        // TENTATIVA 2 (link direto)
+        const fallback = `yt-dlp -g "${url}"`;
+
+        exec(fallback, (err2, stdout2) => {
+
+          if (err2 || !stdout2) {
+            return res.status(200).json({
+              title: "Não foi possível baixar esse vídeo",
+              thumbnail,
+              url: ""
+            });
+          }
+
+          const lines = stdout2.trim().split("\n");
+          const videoUrl = lines[0];
+
+          return res.json({
+            title,
+            thumbnail,
+            url: videoUrl
+          });
+        });
+
+      } else {
+
+        res.json({
+          title,
+          thumbnail,
+          url: `https://clipdown-backend-production.up.railway.app/files/${filename}`
+        });
+
+      }
 
     });
 
