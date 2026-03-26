@@ -11,7 +11,7 @@ app.use(express.json());
 
 app.use("/files", express.static("downloads"));
 
-// função pra baixar imagem
+// baixar thumbnail
 function downloadImage(url, filepath) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(filepath);
@@ -50,7 +50,6 @@ app.post("/download", (req, res) => {
 
       if (data.thumbnail) {
         try {
-          // garante pasta
           if (!fs.existsSync("downloads")) {
             fs.mkdirSync("downloads");
           }
@@ -58,14 +57,14 @@ app.post("/download", (req, res) => {
           await downloadImage(data.thumbnail, thumbpath);
 
           thumbnail = `https://clipdown-backend-production.up.railway.app/files/${thumbname}`;
-        } catch (e) {
+        } catch {
           console.log("Erro ao baixar thumb");
         }
       }
 
     } catch {}
 
-    const command = `yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o "${filepath}" "${url}"`;
+    const command = `mkdir -p downloads && yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o "${filepath}" "${url}"`;
 
     exec(command, (error) => {
 
@@ -77,11 +76,32 @@ app.post("/download", (req, res) => {
         });
       }
 
+      // 🔥 VERIFICA SE O ARQUIVO EXISTE
+      if (!fs.existsSync(filepath)) {
+        return res.status(200).json({
+          title: "Erro ao gerar o arquivo",
+          thumbnail,
+          url: ""
+        });
+      }
+
+      const fileUrl = `https://clipdown-backend-production.up.railway.app/files/${filename}`;
+
       res.json({
         title,
         thumbnail,
-        url: `https://clipdown-backend-production.up.railway.app/files/${filename}`
+        url: fileUrl
       });
+
+      // 🔥 LIMPEZA AUTOMÁTICA (3 minutos)
+      setTimeout(() => {
+        try {
+          if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+          if (fs.existsSync(thumbpath)) fs.unlinkSync(thumbpath);
+        } catch (e) {
+          console.log("Erro ao limpar arquivos");
+        }
+      }, 180000);
 
     });
 
