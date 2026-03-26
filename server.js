@@ -13,19 +13,22 @@ app.post("/download", (req, res) => {
     return res.status(400).json({ error: "URL é obrigatória" });
   }
 
-  // Melhor comando
-  const command = `yt-dlp -f "best[ext=mp4]" -g "${url}"`;
+  const command = `yt-dlp -g "${url}"`;
 
   exec(command, (error, stdout, stderr) => {
-    if (error) {
+    if (error || !stdout) {
       console.error(stderr);
-      return res.status(500).json({ error: "Erro ao processar vídeo" });
+      return res.status(200).json({
+        title: "Erro ao processar vídeo",
+        thumbnail: "",
+        url: ""
+      });
     }
 
     const videoUrl = stdout.trim();
 
     res.json({
-      title: "Video pronto para download",
+      title: "Download pronto",
       thumbnail: "",
       url: videoUrl
     });
