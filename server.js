@@ -1,8 +1,6 @@
 import express from "express";
 import cors from "cors";
 import { exec } from "child_process";
-import fs from "fs";
-import path from "path";
 
 const app = express();
 app.use(cors());
@@ -15,25 +13,25 @@ app.post("/download", (req, res) => {
     return res.status(400).json({ error: "URL é obrigatória" });
   }
 
-  const output = `video_${Date.now()}.mp4`;
-
-  const command = `yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o "${output}" "${url}"`;
+  const command = `yt-dlp -g "${url}"`;
 
   exec(command, (error, stdout, stderr) => {
-    if (error) {
+    if (error || !stdout) {
       console.error(stderr);
-      return res.status(500).json({ error: "Erro ao baixar vídeo" });
+      return res.status(200).json({
+        title: "Erro ao processar vídeo",
+        thumbnail: "",
+        url: ""
+      });
     }
 
-    const filePath = path.resolve(output);
+    const lines = stdout.trim().split("\n");
+    const videoUrl = lines[0];
 
-    res.download(filePath, "video.mp4", (err) => {
-      if (err) {
-        console.error(err);
-      }
-
-      // apagar arquivo depois
-      fs.unlink(filePath, () => {});
+    res.json({
+      title: "Download pronto",
+      thumbnail: "",
+      url: videoUrl
     });
   });
 });
