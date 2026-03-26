@@ -19,29 +19,34 @@ app.post("/download", (req, res) => {
   const filename = `video_${Date.now()}.mp4`;
   const filepath = path.join("downloads", filename);
 
-  // 1️⃣ pega dados do vídeo
   const infoCommand = `yt-dlp -j "${url}"`;
 
   exec(infoCommand, (infoError, infoStdout) => {
 
-    let title = "Video pronto";
-    let thumbnail = "";
+    let title = "Vídeo pronto para download";
+    let thumbnail = "https://via.placeholder.com/300x200?text=ClipDown";
 
     try {
       const data = JSON.parse(infoStdout);
       title = data.title || title;
-      thumbnail = data.thumbnail || "";
+
+      // usa thumbnail só se existir
+      if (data.thumbnail) {
+        thumbnail = data.thumbnail;
+      }
+
     } catch {}
 
-    // 2️⃣ baixa vídeo com áudio
     const downloadCommand = `mkdir -p downloads && yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 -o "${filepath}" "${url}"`;
 
     exec(downloadCommand, (error, stdout, stderr) => {
       if (error) {
         console.error(stderr);
+
+        // NÃO quebra o sistema
         return res.status(200).json({
-          title: "Erro ao processar vídeo",
-          thumbnail: "",
+          title: "Não foi possível processar esse vídeo",
+          thumbnail,
           url: ""
         });
       }
